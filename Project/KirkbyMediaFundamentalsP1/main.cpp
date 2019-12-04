@@ -82,72 +82,72 @@ std::vector<DSP> g_vec_DSP;
 int _current_audio_item_index = 0;
 
 //TODO - MOVE INTO AUDIO MANAGER
-bool initAudioItems()
-{
-	rapidxml::xml_document<> document;
-	rapidxml::xml_node<>* root_node;
-
-	char input;
-	bool usercontrol = true;
-	std::string path;
-	do
-	{
-		printf("Load Compressed Sounds (Y/N): ");
-		std::cin >> input;
-		if (input == 'y' || input == 'Y')
-		{
-			usercontrol = false;
-			path = "./config_files/compressed_audio_file_paths.xml";
-		}
-		else if (input == 'n' || input == 'N')
-		{
-			usercontrol = false;
-			path = "./config_files/uncompressed_audio_file_paths.xml";
-		}
-		else
-			printf("Please select an option...\n");
-	} while (usercontrol);
-
-	// Read XML file
-	std::ifstream soundFiles(path);
-
-	if (!soundFiles)
-	{
-		printf("Unable to open %s\n", path.c_str());
-		system("pause");
-		return false;
-	}
-
-	// Copy the file contents into our buffer
-	std::vector<char> buffer((std::istreambuf_iterator<char>(soundFiles)), std::istreambuf_iterator<char>());
-	buffer.push_back('\0');
-
-	// Parse the buffer using the xml parsinglib
-	document.parse<0>(&buffer[0]);
-
-	// Find the root node
-	root_node = document.first_node("SoundFiles");
-
-	// Iterate through all of the root node's children
-	for (rapidxml::xml_node<>* platform_node = root_node->first_node("File");
-		platform_node;
-		platform_node = platform_node->next_sibling())
-	{
-		int i = 0;
-		if (platform_node->first_attribute("path")->value() > 0)
-		{
-			/*AudioItem ai;
-			ai.set_path(platform_node->first_attribute("path")->value());
-			if (*platform_node->last_attribute("stream")->value() == 't')
-				ai.create_and_play_sound(true, i++);
-			else
-				ai.create_and_play_sound(false, i++);
-			_audio_items.push_back(ai);*/
-		}
-	}
-
-	return true;
-}
+//bool initAudioItems()
+//{
+//	rapidxml::xml_document<> document;
+//	rapidxml::xml_node<>* root_node;
+//
+//	char input;
+//	bool usercontrol = true;
+//	std::string path;
+//	do
+//	{
+//		printf("Load Compressed Sounds (Y/N): ");
+//		std::cin >> input;
+//		if (input == 'y' || input == 'Y')
+//		{
+//			usercontrol = false;
+//			path = "./config_files/compressed_audio_file_paths.xml";
+//		}
+//		else if (input == 'n' || input == 'N')
+//		{
+//			usercontrol = false;
+//			path = "./config_files/uncompressed_audio_file_paths.xml";
+//		}
+//		else
+//			printf("Please select an option...\n");
+//	} while (usercontrol);
+//
+//	// Read XML file
+//	std::ifstream soundFiles(path);
+//
+//	if (!soundFiles)
+//	{
+//		printf("Unable to open %s\n", path.c_str());
+//		system("pause");
+//		return false;
+//	}
+//
+//	// Copy the file contents into our buffer
+//	std::vector<char> buffer((std::istreambuf_iterator<char>(soundFiles)), std::istreambuf_iterator<char>());
+//	buffer.push_back('\0');
+//
+//	// Parse the buffer using the xml parsinglib
+//	document.parse<0>(&buffer[0]);
+//
+//	// Find the root node
+//	root_node = document.first_node("SoundFiles");
+//
+//	// Iterate through all of the root node's children
+//	for (rapidxml::xml_node<>* platform_node = root_node->first_node("File");
+//		platform_node;
+//		platform_node = platform_node->next_sibling())
+//	{
+//		int i = 0;
+//		if (platform_node->first_attribute("path")->value() > 0)
+//		{
+//			/*AudioItem ai;
+//			ai.set_path(platform_node->first_attribute("path")->value());
+//			if (*platform_node->last_attribute("stream")->value() == 't')
+//				ai.create_and_play_sound(true, i++);
+//			else
+//				ai.create_and_play_sound(false, i++);
+//			_audio_items.push_back(ai);*/
+//		}
+//	}
+//
+//	return true;
+//}
 
 struct point 
 {
@@ -186,13 +186,21 @@ int main() {
 #pragma region Main_Initializers
 	// FMOD STUFF
 	cAudioManager* pAudioManager = cAudioManager::GetAudioManager();
+	pAudioManager->error_check();
 
-	//TODO move this into manager and multi functions.
-	fprintf(stdout, "Init Audio Items...\n");
-	assert(initAudioItems());
-	//////////////////////////////////////////////////
+	pAudioManager->LoadDSPs();
+	pAudioManager->error_check();
+	
+	assert(pAudioManager->LoadNetSounds());
+	pAudioManager->error_check();
+	
+	assert(pAudioManager->LoadTextToSpeech());
+	pAudioManager->error_check();
 
-	fprintf(stdout, "Init opengl ...\n");
+	assert(pAudioManager->LoadTextToWav());
+	pAudioManager->error_check();
+
+	fprintf(stdout, "Init opengl...\n");
 	assert(init_gl());
 	fprintf(stdout, "Init text...\n");
 	assert(init_text());

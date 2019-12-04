@@ -21,14 +21,22 @@ class cAudioManager {
 	cAudioManager();
 	static cAudioManager stonAudioMngr;
 
+	//Filepaths
+	std::string directory = "./config_files/";
+	std::string netSounds = "netSounds.xml";
+	std::string textToSpeech = "textToSpeech.xml";
+	std::string textToWav = "textToWav.xml";
+
 public:
 	FMOD::System* _system;
 	FMOD_RESULT _result;
-
 	static cAudioManager* GetAudioManager();
 
 	void LoadDSPs();
-
+	bool LoadNetSounds();
+	bool LoadTextToSpeech();
+	bool LoadTextToWav();
+	
 	void Release();
 
 	void error_check();

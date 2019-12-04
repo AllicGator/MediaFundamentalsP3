@@ -3,6 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+
+## Ignore .ply, .mp3, .wav, .bmp files
+*.ply
+*.mp3
+*.wav
+*.bmp
+
 # User-specific files
 *.suo
 *.user

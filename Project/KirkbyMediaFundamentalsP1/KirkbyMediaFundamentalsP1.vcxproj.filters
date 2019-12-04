@@ -13,21 +13,33 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Audio Manager">
+      <UniqueIdentifier>{2af6f71f-7a5f-4cbd-9e30-711373711c22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Audio Item">
+      <UniqueIdentifier>{3db6e191-e30d-4779-91a1-297d2eba75b1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FMODSystem.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="cAudioItem.hpp">
+      <Filter>Audio Item</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="FMODSystem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\common\src\glad.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cAudioManager.hpp">
+      <Filter>Audio Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cAudioManager.cpp">
+      <Filter>Audio Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="cAudioItem.cpp">
+      <Filter>Audio Item</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

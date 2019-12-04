@@ -42,7 +42,8 @@
 
 #include <RapidXml/rapidxml.hpp>
 
-#include "FMODSystem.h"
+#include "cAudioItem.hpp"
+#include "cAudioManager.hpp"
 
 #include <ft2build.h>
 #include <iostream>
@@ -73,290 +74,14 @@ unsigned int _uniform_color;
 
 #define BUFFER_SIZE 255
 
-//FMOD globals
-//FMOD functions
-void errorCheck(FMOD_RESULT result);
-void releaseFMOD();
-bool initFMOD();
-
-class AudioItem
-{
-private:
-	FMOD_RESULT result;
-	std::string path;
-	std::string format;
-	std::string type;
-	char name[BUFFER_SIZE];
-	float volume;	//Volume level, from 0.0 to 1.0
-	float pitch;	//Pitch value, 0.5 = half pitch, 2.0 = double pitch
-	float pan; //Pan level, from -1.0 (left) to 1.0 (right), default = 0 (center).
-	float freq;
-	bool is_paused;
-	bool is_playing;
-	int channels;
-	int bits;
-	unsigned int pos;
-	unsigned int length;
-
-public:
-	FMOD::Sound* sound;
-	FMOD::Channel* channel;
-	//constructor
-	AudioItem() {
-		path = "";
-		name[BUFFER_SIZE - 1] = { '\0' };
-		volume = 1.0f;
-		pitch = 1.0f;//check documentation for pitch allowed values
-		pan = 0.0f; //chec documentation for pan allowed values
-		is_paused = true;
-		is_playing = false;
-		sound = 0;
-		channel = 0;
-	}
-
-	bool create_and_play_sound(bool is_streamed_sound, int channelID) {
-		if (_system) 
-		{
-			result = _system->createSound(path.c_str(), (is_streamed_sound) ? FMOD_CREATESTREAM : FMOD_DEFAULT, 0, &sound);
-			errorCheck(result);
-
-			result = _system->getChannel(channelID, &channel);
-			errorCheck(result);
-
-			result = _system->playSound(sound, 0, is_paused, &channel);
-			errorCheck(result);
-
-			if (is_streamed_sound && channel)
-			{
-				result = channel->setMode(FMOD_LOOP_NORMAL);
-				errorCheck(result);
-			}
-
-			if (sound) 
-			{
-				FMOD_SOUND_TYPE tmpType;
-				FMOD_SOUND_FORMAT tmpFormat;
-				result = sound->getFormat(&tmpType, &tmpFormat, &channels, &bits);
-				errorCheck(result);
-
-				format = _map_format[tmpFormat];
-				type = _map_type[tmpType];
-			}
-
-			return true;
-		}
-
-		return false;
-	}
-
-	void restart_sound()
-	{
-		if (_system)
-		{
-			float tmpPitch = pitch;
-			float tmpVolume = volume;
-			channel->stop();
-			result = _system->playSound(sound, 0, false, &channel);
-			set_volume(tmpVolume);
-			set_pitch(tmpPitch);
-			errorCheck(result);
-		}
-	}
-
-	std::string get_name() 
-	{
-		if (sound) 
-		{
-			result = sound->getName(name, BUFFER_SIZE);
-			errorCheck(result);
-		}
-		return name;
-	}
-
-	float get_volume() 
-	{
-		if (channel) 
-		{
-			result = channel->getVolume(&volume);
-			errorCheck(result);
-		}
-		return volume;
-	}
-	void change_volume(float incr)
-	{
-		if (channel)
-		{
-			channel->getVolume(&volume);
-			//casting to double to avoid overflow warnings
-			if (static_cast<double>(volume) + incr >= 1.0)
-				result = channel->setVolume(1.0);
-			else if (static_cast<double>(volume) + incr <= 0.0)
-				result = channel->setVolume(0.0);
-			else
-				result = channel->setVolume(volume += incr);
-			errorCheck(result);
-		}
-	}
-	void set_volume(float vol)
-	{
-		if (channel)
-		{
-			channel->getVolume(&volume);
-			//casting to double to avoid overflow warnings
-			if (vol >= 1.0)
-				result = channel->setVolume(1.0);
-			else if (vol <= 0.0)
-				result = channel->setVolume(0.0);
-			else
-				result = channel->setVolume(vol);
-			errorCheck(result);
-		}
-	}
-
-	void set_path(std::string new_path) {
-		path = new_path;
-	}
-
-	bool get_is_paused() 
-	{
-		if (channel) 
-		{
-			result = channel->getPaused(&is_paused);
-			errorCheck(result);
-		}
-		return is_paused;
-	}
-	void set_is_paused(bool new_is_paused) 
-	{
-		if (channel) 
-		{
-			is_paused = new_is_paused;
-			result = channel->setPaused(is_paused);
-			errorCheck(result);
-		}
-	}
-
-	float get_frequency()
-	{
-		if (channel) 
-		{
-			result = channel->getFrequency(&freq);
-			errorCheck(result);
-		}
-		return freq;
-	}
-
-	float get_pitch()
-	{
-		if (channel) 
-		{
-			result = channel->getPitch(&pitch);
-			errorCheck(result);
-		}
-		return pitch;
-	}
-	void set_pitch(float pit)
-	{
-		if (channel)
-		{
-			channel->getPitch(&pitch);
-			//casting to double to avoid overflow warnings
-			if (pit >= 2.0)
-				result = channel->setPitch(2.0);
-			else if (pit <= 0.5)
-				result = channel->setPitch(0.5);
-			else
-				result = channel->setPitch(pit);
-			errorCheck(result);
-		}
-	}
-	void change_pitch(float incr)
-	{
-		if (channel)
-		{
-			channel->getPitch(&pitch);
-			//casting to double to avoid overflow warnings
-			if (static_cast<double>(pitch) + incr >= 2.0)
-				result = channel->setPitch(2.0);
-			else if (static_cast<double>(pitch) + incr <= 0.5)
-				result = channel->setPitch(0.5);
-			else
-				result = channel->setPitch(pitch += incr);
-			errorCheck(result);
-		}
-	}
-
-	//No simple method of getting pan from channel, so will store the variable myself.
-	float get_pan()
-	{
-		return pan;
-	}
-	void change_pan(float incr)
-	{
-		if (channel)
-		{
-			if (static_cast<double>(pan) + incr >= 1.0)
-				result = channel->setPan(pan = 1.0);
-			else if (static_cast<double>(pan) + incr <= -1.0)
-				result = channel->setPan(pan = -1.0);
-			else
-				result = channel->setPan(pan += incr);
-			if (pan == -0.0)
-				pan = 0.0;
-			errorCheck(result);
-		}
-	}
-
-	int get_bits()
-	{
-		return bits;
-	}
-	int get_channels()
-	{
-		return channels;
-	}
-	std::string get_format()
-	{
-		return format;
-	}
-	std::string get_type()
-	{
-		return type;
-	}
-
-	unsigned int get_position()
-	{
-		if (channel)
-		{
-			result = channel->getPosition(&pos, FMOD_TIMEUNIT_MS);
-			errorCheck(result);
-		}
-		return pos;
-	}
-
-	bool channel_is_playing()
-	{
-		bool tmp;
-		result = channel->isPlaying(&tmp);
-		errorCheck(result);
-		return tmp;
-	}
-
-	unsigned int get_length()
-	{
-		if (channel)
-		{
-			result = sound->getLength(&length, FMOD_TIMEUNIT_MS);
-			errorCheck(result);
-		}
-		return length;
-	}
-};
-
 //global audio item objects
-std::vector<AudioItem> _audio_items;
+std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
+std::map<std::string, cAudioItem*> mpAudio;
+std::vector<DSP> g_vec_DSP;
+//std::vector<AudioItem> _audio_items;
 int _current_audio_item_index = 0;
 
+//TODO - MOVE INTO AUDIO MANAGER
 bool initAudioItems()
 {
 	rapidxml::xml_document<> document;
@@ -411,59 +136,17 @@ bool initAudioItems()
 		int i = 0;
 		if (platform_node->first_attribute("path")->value() > 0)
 		{
-			AudioItem ai;
+			/*AudioItem ai;
 			ai.set_path(platform_node->first_attribute("path")->value());
 			if (*platform_node->last_attribute("stream")->value() == 't')
 				ai.create_and_play_sound(true, i++);
 			else
 				ai.create_and_play_sound(false, i++);
-			_audio_items.push_back(ai);
+			_audio_items.push_back(ai);*/
 		}
 	}
 
 	return true;
-}
-
-void errorCheck(FMOD_RESULT result) 
-{
-	if (result != FMOD_OK) 
-	{
-		printf("FMOD error: %d", result);
-		releaseFMOD();
-		system("pause");
-		exit(1);
-	}
-}
-
-bool initFMOD() 
-{
-	_result = FMOD::System_Create(&_system);
-	errorCheck(_result);
-
-	_result = _system->init(32, FMOD_INIT_NORMAL, 0);
-	errorCheck(_result);
-
-	return true;
-}
-
-void releaseFMOD() 
-{
-	std::vector<AudioItem>::iterator it = _audio_items.begin();
-	for (it; it != _audio_items.end(); it++)
-	{
-		if (it->sound) {
-			_result = it->sound->release();
-			errorCheck(_result);
-		}
-	}
-
-	if (_system) 
-	{
-		_result = _system->close();
-		errorCheck(_result);
-		_result = _system->release();
-		errorCheck(_result);
-	}
 }
 
 struct point 
@@ -486,56 +169,28 @@ static void error_callback(int error, const char* description)
 	fprintf(stderr, "Error: %s\n", description);
 }
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
+// TODO - move to its own function, add controls
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 
-	if (mods == GLFW_MOD_SHIFT)
-	{
-		//Change Pitch
-		if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_pitch(0.01f);
-		if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_pitch(-0.01f);
-		//Change Pan
-		if (key == GLFW_KEY_RIGHT && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_pan(0.05f);
-		if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_pan(-0.05f);
+	if (mods == GLFW_MOD_SHIFT) {
+		
 	}
-	else
-	{
-		// Pause/Play
-		if (key == GLFW_KEY_P && action == GLFW_PRESS)
-			_audio_items[_current_audio_item_index].set_is_paused(!_audio_items[_current_audio_item_index].get_is_paused());
-
-		// Next Track
-		if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
-			_current_audio_item_index = (_current_audio_item_index >= _audio_items.size() - 1) ? 0 : _current_audio_item_index + 1;
-		// Previous Track
-		if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
-			_current_audio_item_index = (_current_audio_item_index == 0) ? _audio_items.size() - 1 : _current_audio_item_index - 1;
-
-		//Reset Track
-		if (key == GLFW_KEY_R && action == GLFW_PRESS)
-			_audio_items[_current_audio_item_index].restart_sound();
-
-		// Change Volume
-		if (key == GLFW_KEY_UP && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_volume(0.01f);
-		if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT))
-			_audio_items[_current_audio_item_index].change_volume(-0.01f);
+	else {
+		
 	}
 }
 
 int main() {
 #pragma region Main_Initializers
 	// FMOD STUFF
-	fprintf(stdout, "Init FMOD...\n");
-	assert(initFMOD());
+	cAudioManager* pAudioManager = cAudioManager::GetAudioManager();
+
+	//TODO move this into manager and multi functions.
 	fprintf(stdout, "Init Audio Items...\n");
 	assert(initAudioItems());
+	//////////////////////////////////////////////////
 
 	fprintf(stdout, "Init opengl ...\n");
 	assert(init_gl());
@@ -568,7 +223,7 @@ int main() {
 		render_text("  Up/Down - Volume,   +Shift for Pitch.");
 		render_text("<=======================>");
 		
-		sprintf(_text_buffer, "Current Audio Item: %s", _audio_items[_current_audio_item_index].get_name().c_str());
+		//sprintf(_text_buffer, "Current Audio Item: %s", _audio_items[_current_audio_item_index].get_name().c_str());
 		render_text(_text_buffer);
 
 		glfwSwapBuffers(_main_window);
@@ -577,7 +232,7 @@ int main() {
 		glfwGetWindowSize(_main_window, &_window_width, &_window_height);
 	}
 
-	releaseFMOD();
+	pAudioManager->Release();
 
 	glfwDestroyWindow(_main_window);
 	glfwTerminate();

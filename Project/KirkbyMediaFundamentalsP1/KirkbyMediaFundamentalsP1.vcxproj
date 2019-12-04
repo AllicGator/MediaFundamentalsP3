@@ -146,12 +146,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="FMODSystem.h" />
+    <ClInclude Include="cAudioItem.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\src\glad.c" />
-    <ClCompile Include="FMODSystem.cpp" />
+    <ClCompile Include="cAudioManager.cpp" />
+    <ClCompile Include="cAudioItem.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="cAudioManager.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -43,7 +43,6 @@
 #include <RapidXml/rapidxml.hpp>
 
 #include "FMODSystem.h"
-#include "GameLogic.h"
 
 #include <ft2build.h>
 #include <iostream>
@@ -70,11 +69,6 @@ unsigned int _uniform_tex;
 unsigned int _attribute_coord;
 unsigned int _dp_vbo;
 unsigned int _uniform_color;
-
-
-Player _player;
-Boss _boss = Boss("../common/assets/ascii/death.txt");
-std::vector<Skeleton> _skeletons;
 #pragma endregion
 
 #define BUFFER_SIZE 255
@@ -487,118 +481,6 @@ bool init_shaders();
 void render_text(const char* text);
 #pragma endregion
 
-#pragma region GameLogic
-bool initGame()
-{
-	_skeleton_index = 0;
-	_player = Player();
-	_boss = Boss("../common/assets/ascii/death.txt");
-
-	_skeletons.clear();
-
-	for (size_t i = 0; i < _skeleton_max; i++)
-	{
-		_skeletons.push_back(Skeleton("../common/assets/ascii/skeleton.txt"));
-	}
-
-	_game_lost = false;
-	_game_won = false;
-
-	for (AudioItem& ai : _audio_items)
-	{
-		ai.set_is_paused(true);
-	}
-	_audio_items[0].set_is_paused(false);
-
-	return true;
-}
-
-void PlayerAttack()
-{
-	_audio_items[5].restart_sound();
-	Sleep(500);
-	if (_skeleton_index < _skeleton_max)
-	{
-		if (_skeletons[_skeleton_index].TakeDamage(_player.DealDamag()))
-		{
-			_audio_items[3].restart_sound();
-			Sleep(500);
-		}
-
-		if (_skeletons[_skeleton_index].GetCurHP() <= 0)
-			_skeleton_index++;
-		if (_skeleton_index == _skeletons.size())
-		{
-			for (AudioItem& ai : _audio_items)
-			{
-				ai.set_is_paused(true);
-			}
-			_audio_items[1].restart_sound();
-		}
-	}
-	else if (_boss.GetCurHP() > 0)
-	{
-		if (_boss.TakeDamage(_player.DealDamag()))
-		{
-			_audio_items[3].restart_sound();
-			Sleep(500);
-		}
-	}
-
-	if (_boss.GetCurHP() <= 0)
-	{
-		_game_won = true;
-		for (AudioItem& ai : _audio_items)
-		{
-			ai.set_is_paused(true);
-		}
-		_audio_items[9].restart_sound();
-	}
-}
-
-void EnemyAttack()
-{
-	if (_skeleton_index < _skeleton_max)
-	{
-		_audio_items[5].restart_sound();
-		Sleep(1000);
-		if (_player.TakeDamage(_skeletons[_skeleton_index].DealDamag()))
-		{
-			_audio_items[4].restart_sound();
-			Sleep(1000);
-		}
-	}
-	else if (_boss.GetCurHP() > 0)
-	{
-		_audio_items[5].restart_sound();
-		Sleep(1000);
-		if (_player.TakeDamage(_boss.DealDamag()))
-		{
-			_audio_items[4].restart_sound();
-			Sleep(1000);
-		}
-	}
-
-	if (_player.GetCurHP() <= 0)
-	{
-		_game_lost = true;
-		for (AudioItem& ai : _audio_items)
-		{
-			ai.set_is_paused(true);
-		}
-		_audio_items[7].restart_sound();
-		_audio_items[8].restart_sound();
-	}
-}
-
-void Heal()
-{
-	_player.Heal();
-	_audio_items[6].restart_sound();
-	Sleep(1000);
-}
-#pragma endregion
-
 static void error_callback(int error, const char* description)
 {
 	fprintf(stderr, "Error: %s\n", description);
@@ -621,35 +503,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 			_audio_items[_current_audio_item_index].change_pan(0.05f);
 		if (key == GLFW_KEY_LEFT && (action == GLFW_PRESS || action == GLFW_REPEAT))
 			_audio_items[_current_audio_item_index].change_pan(-0.05f);
-
-		//Restart Game
-		if (key == GLFW_KEY_R && action == GLFW_PRESS)
-		{
-			initGame();
-		}
 	}
 	else
 	{
-		//super basic game controls when gamestate is active
-		if (!_game_lost && !_game_won && !_toggle_help)
-		{
-			if (key == GLFW_KEY_Z && action == GLFW_PRESS)
-			{
-				PlayerAttack();
-				EnemyAttack();
-			}
-
-			if (key == GLFW_KEY_X && action == GLFW_PRESS)
-			{
-				Heal();
-				EnemyAttack();
-			}
-		}
-
-		// Toggle Help
-		if (key == GLFW_KEY_H && action == GLFW_PRESS)
-			_toggle_help = !_toggle_help;
-
 		// Pause/Play
 		if (key == GLFW_KEY_P && action == GLFW_PRESS)
 			_audio_items[_current_audio_item_index].set_is_paused(!_audio_items[_current_audio_item_index].get_is_paused());
@@ -670,28 +526,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 			_audio_items[_current_audio_item_index].change_volume(0.01f);
 		if (key == GLFW_KEY_DOWN && (action == GLFW_PRESS || action == GLFW_REPEAT))
 			_audio_items[_current_audio_item_index].change_volume(-0.01f);
-
-		//Select items in audio_items - should really check that items actually exist though....
-		if (key == GLFW_KEY_1 && action == GLFW_PRESS)
-			_info_item = 1;
-		if (key == GLFW_KEY_2 && action == GLFW_PRESS)
-			_info_item = 2;
-		if (key == GLFW_KEY_3 && action == GLFW_PRESS)
-			_info_item = 3;
-		if (key == GLFW_KEY_4 && action == GLFW_PRESS)
-			_info_item = 4;
-		if (key == GLFW_KEY_5 && action == GLFW_PRESS)
-			_info_item = 5;
-		if (key == GLFW_KEY_6 && action == GLFW_PRESS)
-			_info_item = 6;
-		if (key == GLFW_KEY_7 && action == GLFW_PRESS)
-			_info_item = 7;
-		if (key == GLFW_KEY_8 && action == GLFW_PRESS)
-			_info_item = 8;
-		if (key == GLFW_KEY_9 && action == GLFW_PRESS)
-			_info_item = 9;
-		if (key == GLFW_KEY_0 && action == GLFW_PRESS)
-			_info_item = 0;
 	}
 }
 
@@ -710,8 +544,6 @@ int main() {
 	fprintf(stdout, "Init shaders...\n");
 	assert(init_shaders());
 
-	assert(initGame());
-
 	fprintf(stdout, "Ready ...!\n");
 #pragma endregion
 
@@ -729,131 +561,15 @@ int main() {
 
 		render_text("           Dylan Kirkby's Media Fundamentals P1");
 		render_text("<=======================| Press H to Toggle Help");
-		if (_toggle_help)
-		{
-			render_text("  ESC to Exit!");
-			render_text("  'P' - Play/Pause Track");
-			render_text("  'R' - reset track to 00:00,   +Shift to reset game state");
-			render_text("  Left/Right - Change Sound,   +Shift for Pan");
-			render_text("  Up/Down - Volume,   +Shift for Pitch.");
-			render_text("<=======================>");
-		}
+		render_text("  ESC to Exit!");
+		render_text("  'P' - Play/Pause Track");
+		render_text("  'R' - reset track to 00:00,   +Shift to reset game state");
+		render_text("  Left/Right - Change Sound,   +Shift for Pan");
+		render_text("  Up/Down - Volume,   +Shift for Pitch.");
+		render_text("<=======================>");
 		
 		sprintf(_text_buffer, "Current Audio Item: %s", _audio_items[_current_audio_item_index].get_name().c_str());
 		render_text(_text_buffer);
-
-		switch (_info_item)
-		{
-		case 1:
-			sprintf(_text_buffer, (_audio_items[_current_audio_item_index].get_is_paused()) ? "Paused: YES" : "Paused: NO");
-			render_text(_text_buffer);
-			break;
-		case 2:
-			sprintf(_text_buffer, "Channel - Volume: %d%% (0 - 100)", static_cast<int>(_audio_items[_current_audio_item_index].get_volume() * 100));
-			render_text(_text_buffer);
-			break;
-		case 3:
-			sprintf(_text_buffer, "Channel - Pitch: %.02f (0.5 - 2.0)", _audio_items[_current_audio_item_index].get_pitch());
-			render_text(_text_buffer);
-			break;
-		case 4:
-			sprintf(_text_buffer, "Channel - Balance: %.02f (-1.0 - 1.0)", _audio_items[_current_audio_item_index].get_pan());
-			render_text(_text_buffer);
-			break;
-		case 5:
-			sprintf(_text_buffer, "Channel - Time: %02d:%02d / %02d:%02d", _audio_items[_current_audio_item_index].get_position() / 1000 / 60,
-				_audio_items[_current_audio_item_index].get_position() / 1000 % 60,
-				_audio_items[_current_audio_item_index].get_length() / 1000 / 60,
-				_audio_items[_current_audio_item_index].get_length() / 1000 % 60);
-			render_text(_text_buffer);
-			break;
-		case 6:
-			sprintf(_text_buffer, "Channel - Frequency: %f", _audio_items[_current_audio_item_index].get_frequency());
-			render_text(_text_buffer);
-			break;
-		case 7:
-			sprintf(_text_buffer, "Format: %s", _audio_items[_current_audio_item_index].get_format().c_str());
-			render_text(_text_buffer);
-			break;
-		case 8:
-			sprintf(_text_buffer, "Type: %s", _audio_items[_current_audio_item_index].get_type().c_str());
-			render_text(_text_buffer);
-			break;
-		case 9:
-			sprintf(_text_buffer, "Sound - Number of Channels: %d", _audio_items[_current_audio_item_index].get_channels());
-			render_text(_text_buffer);
-			break;
-		case 0:
-			sprintf(_text_buffer, "Sound - Number of bits: %d", _audio_items[_current_audio_item_index].get_bits());
-			render_text(_text_buffer);
-			break;
-		default:
-			render_text("Use number keys to check currently selected sound's information.");
-			break;
-		}
-
-		render_text("<=======================| Game");
-		if (!_toggle_help && !_game_won && !_game_lost)
-		{
-			if (_skeleton_index < _skeleton_max)
-			{
-				for (size_t i = 0; i < _skeletons[_skeleton_index].asciiArt.size(); i++)
-				{
-					render_text(_skeletons[_skeleton_index].asciiArt[i].c_str());
-				}
-				render_text("<=======================>");
-				sprintf(_text_buffer, "<==| Z: Attack    <==| Skeleton %d HP: %d / %d",
-					_skeleton_index + 1,
-					_skeletons[_skeleton_index].GetCurHP(),
-					_skeletons[_skeleton_index].GetMaxHP());
-				render_text(_text_buffer);
-			}
-			else if (_boss.GetCurHP() > 0)
-			{
-				for (size_t i = 0; i < _boss.asciiArt.size(); i++)
-				{
-					render_text(_boss.asciiArt[i].c_str());
-				}
-				render_text("<=======================>");
-				sprintf(_text_buffer, "<==| Z: Attack    <==| BOSS HP: %d / %d",
-					_boss.GetCurHP(),
-					_boss.GetMaxHP());
-				render_text(_text_buffer);
-
-			}
-			sprintf(_text_buffer, "<==| X: Heal      <==| Your HP: %d / %d",
-				_player.GetCurHP(),
-				_player.GetMaxHP());
-			render_text(_text_buffer);
-		}
-		else if (_game_won)
-		{
-			render_text("");
-			render_text("");
-			render_text("     YOU WIN    ");
-		}
-		else if (_game_lost)
-		{
-			render_text("     GAME OVER    ");
-			render_text("                         /  `Y`");
-			render_text("                    _   /   /");
-			render_text("                   {_'-K.__/");
-			render_text("                     `/-.__L._");
-			render_text("                     /  ' /`\\_}");
-			render_text("                    /  ' /");
-			render_text("            ____   /  ' /");
-			render_text("     ,-'~~~~    ~~/  ' /_");
-			render_text("   ,'             ``~~~%%',");
-			render_text("  (                     %  Y");
-			render_text(" {                      %% I");
-			render_text("{      -                 %  `.");
-			render_text("|       ',                %  )");
-			render_text("|        |   ,..__      __. Y");
-			render_text("|    .,_./  Y ' / ^Y   J   )|");
-			render_text("\\           |' /   |   |   ||");
-			render_text(" \\          L_/    . _ (_,.'(");
-			render_text("  \\,   ,      ^^""' / |      )");
-		}
 
 		glfwSwapBuffers(_main_window);
 		glfwPollEvents();

@@ -146,43 +146,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="cBoss.h" />
-    <ClInclude Include="cGameEntity.h" />
-    <ClInclude Include="cPlayer.h" />
-    <ClInclude Include="cSkeleton.h" />
     <ClInclude Include="FMODSystem.h" />
-    <ClInclude Include="GameLogic.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\common\src\glad.c" />
-    <ClCompile Include="cBoss.cpp" />
-    <ClCompile Include="cGameEntity.cpp" />
-    <ClCompile Include="cPlayer.cpp" />
-    <ClCompile Include="cSkeleton.cpp" />
     <ClCompile Include="FMODSystem.cpp" />
-    <ClCompile Include="GameLogic.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
-  
   <!-- INFO-6025-01-19F Configuration and Deployment -->
   <!-- MIDTERM -->
   <!-- Dylan Kirkby -->
-  
   <!-- Input Directories -->
   <PropertyGroup>
-  	<ModelsDir>data/models</ModelsDir>
-	<ShadersDir>data/shaders</ShadersDir>
-	<LightConfigDir>data/config/lights</LightConfigDir>
-	<ModelConfigDir>data/config/models</ModelConfigDir>
-	<ShaderConfigDir>data/config/shaders</ShaderConfigDir>
+    <ModelsDir>data/models</ModelsDir>
+    <ShadersDir>data/shaders</ShadersDir>
+    <LightConfigDir>data/config/lights</LightConfigDir>
+    <ModelConfigDir>data/config/models</ModelConfigDir>
+    <ShaderConfigDir>data/config/shaders</ShaderConfigDir>
   </PropertyGroup>
-  
-  
-  
-  
-  
-  
 </Project>

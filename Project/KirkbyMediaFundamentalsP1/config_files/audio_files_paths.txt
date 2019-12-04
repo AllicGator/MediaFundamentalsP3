@@ -1,0 +1,10 @@
+../common/assets/audio/ancient-groover.mid
+../common/assets/audio/battle-xg-.mid
+../common/assets/audio/morrowind-main-theme.mid
+../common/assets/audio/PlaceHolder.mp3
+../common/assets/audio/Player Death.flac
+../common/assets/audio/Player Hit 1.wav
+../common/assets/audio/Player Hit 2.mp2
+../common/assets/audio/Undertale Sound Effect - Attack.mp3
+../common/assets/audio/Undertale Sound Effect - Heal.mp3
+../common/assets/audio/victory.mid

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SoundFiles>
+  <!-- BGM Tracks and loops -->
+  <File path="../common/assets/audio/compressed/FF7 Fighting.mp3" stream="t" />
+  <File path="../common/assets/audio/compressed/juhani-junkala-epic-boss-battle.mp3" stream="t" />
+  <File path="../common/assets/audio/compressed/Mabinogi Wish Main Loop.mp3" stream="t" />
+  
+  <!-- Battle! -->
+  <File path="../common/assets/audio/compressed/Enemy_Hit.mp3" stream="f" />
+  <File path="../common/assets/audio/compressed/Player Hit 2.mp3" stream="f" />
+  <File path="../common/assets/audio/compressed/Undertale Sound Effect - Attack.mp3" stream="f" />
+  <File path="../common/assets/audio/compressed/Undertale Sound Effect - Heal.mp3" stream="f" />
+  
+  <!-- Defeat Sound -->
+  <File path="../common/assets/audio/compressed/115 Fading Consciousness.mp3" stream="f" />
+  <File path="../common/assets/audio/compressed/Player Death.mp3" stream="f" />
+
+  <!-- Victory Sounds -->
+  <File path="../common/assets/audio/compressed/FFVIII Victory Fanfare.mp3" stream="f" />
+</SoundFiles>

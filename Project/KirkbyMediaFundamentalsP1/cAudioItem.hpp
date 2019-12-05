@@ -6,7 +6,6 @@
 #include <map>
 
 extern std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
-const int BUFFER_SIZE = 255;
 
 class cAudioItem
 {

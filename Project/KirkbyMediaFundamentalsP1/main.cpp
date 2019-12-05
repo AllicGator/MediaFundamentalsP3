@@ -81,7 +81,12 @@ std::vector<DSP> g_vec_DSP;
 //std::vector<AudioItem> _audio_items;
 int _current_audio_item_index = 0;
 
-bool _dspEnabled = false;
+#define LATENCY_MS      (50) /* Some devices will require higher latency to avoid glitches */
+#define DRIFT_MS        (1)
+#define DEVICE_INDEX    (0)
+FMOD::Sound* _sound = NULL;
+FMOD::Channel* _channel = NULL;
+bool _record = false;
 cAudioManager* pAudioManager = cAudioManager::GetAudioManager();
 
 //TODO - MOVE INTO AUDIO MANAGER
@@ -177,14 +182,92 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 
-	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+	if (key == GLFW_KEY_4 && action == GLFW_PRESS)
 	{
-		FMOD_REVERB_PROPERTIES propOn = FMOD_PRESET_CONCERTHALL;
-		FMOD_REVERB_PROPERTIES propOff = FMOD_PRESET_OFF;
+		bool isRecording = false;
+		pAudioManager->_system->isRecording(DEVICE_INDEX, &isRecording);
 
-		_dspEnabled = !_dspEnabled;
+		if (isRecording)
+		{
+			pAudioManager->_system->recordStop(DEVICE_INDEX);
+			_channel->stop();
+		}
+		else
+		{
+			/* Clean up previous record sound */
+			if (_sound)
+			{
+				pAudioManager->_result = _sound->release();
+				pAudioManager->error_check();
+			}
 
-		pAudioManager->_result = pAudioManager->_system->setReverbProperties(0, _dspEnabled ? &propOn : &propOff);
+			/* Query device native settings and start a recording */
+			int nativeRate = 0;
+			int nativeChannels = 0;
+			pAudioManager->_result = pAudioManager->_system->getRecordDriverInfo(DEVICE_INDEX, NULL, 0, NULL, &nativeRate, NULL, &nativeChannels, NULL);
+			pAudioManager->error_check();
+
+			FMOD_CREATESOUNDEXINFO exinfo = { 0 };
+			exinfo.cbsize = sizeof(FMOD_CREATESOUNDEXINFO);
+			exinfo.numchannels = nativeChannels;
+			exinfo.format = FMOD_SOUND_FORMAT_PCM16;
+			exinfo.defaultfrequency = nativeRate;
+			exinfo.length = nativeRate * sizeof(short) * nativeChannels; /* 1 second buffer, size here doesn't change latency */
+
+			pAudioManager->_result = pAudioManager->_system->createSound(0, FMOD_LOOP_NORMAL | FMOD_OPENUSER, &exinfo, &_sound);
+			pAudioManager->error_check();
+
+			pAudioManager->_result = pAudioManager->_system->recordStart(DEVICE_INDEX, _sound, true);
+			if (pAudioManager->_result != FMOD_ERR_RECORD_DISCONNECTED)
+			{
+				pAudioManager->error_check();
+			}
+
+			if (_sound)
+			{
+				pAudioManager->_result = pAudioManager->_system->playSound(_sound, NULL, false, &_channel);
+				pAudioManager->error_check();
+			}
+		}
+
+	}
+
+	if (key == GLFW_KEY_5 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[0].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[0].dsp->setBypass(bypass);
+		pAudioManager->error_check();
+	}
+
+	if (key == GLFW_KEY_6 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[1].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[1].dsp->setBypass(bypass);
+		pAudioManager->error_check();
+	}
+
+	if (key == GLFW_KEY_7 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[2].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[2].dsp->setBypass(bypass);
 		pAudioManager->error_check();
 	}
 
@@ -223,16 +306,7 @@ int main() {
 	fprintf(stdout, "Ready ...!\n");
 #pragma endregion
 
-#pragma region Record
-#define LATENCY_MS      (50) /* Some devices will require higher latency to avoid glitches */
-#define DRIFT_MS        (1)
-#define DEVICE_INDEX    (0)
-
-	FMOD::Channel* channel = NULL;
-	unsigned int samplesRecorded = 0;
-	unsigned int samplesPlayed = 0;
-	bool _dspEnabled = false;
-
+#pragma region Checks
 	unsigned int version = 0;
 	pAudioManager->_result = pAudioManager->_system->getVersion(&version);
 	pAudioManager->error_check();
@@ -256,6 +330,11 @@ int main() {
 		system("pause");
 		exit(1);
 	}
+#pragma endregion
+
+#pragma region Record PlaybackRate
+	unsigned int samplesRecorded = 0;
+	unsigned int samplesPlayed = 0;
 
 	/*Determine latency in samples.*/
 	int nativeRate = 0;
@@ -268,23 +347,27 @@ int main() {
 	unsigned int adjustedLatency = desiredLatency;                      /* User specified latency adjusted for driver update granularity */
 	int actualLatency = desiredLatency;                                 /* Latency measured once playback begins (smoothened for jitter) */
 
-	/*Create user sound to record into, then start recording.*/
-	FMOD_CREATESOUNDEXINFO exinfo = { 0 };
-	exinfo.cbsize = sizeof(FMOD_CREATESOUNDEXINFO);
-	exinfo.numchannels = nativeChannels;
-	exinfo.format = FMOD_SOUND_FORMAT_PCM16;
-	exinfo.defaultfrequency = nativeRate;
-	exinfo.length = nativeRate * sizeof(short) * nativeChannels; /* 1 second buffer, size here doesn't change latency */
-
-	FMOD::Sound* _sound = NULL;
-	pAudioManager->_result = pAudioManager->_system->createSound(0, FMOD_LOOP_NORMAL | FMOD_OPENUSER, &exinfo, &_sound);
-	pAudioManager->error_check();
-
-	pAudioManager->_result = pAudioManager->_system->recordStart(DEVICE_INDEX, _sound, true);
-	pAudioManager->error_check();
-
 	unsigned int soundLength = 0;
-	pAudioManager->_result = _sound->getLength(&soundLength, FMOD_TIMEUNIT_PCM);
+#pragma endregion
+
+#pragma region RecordDSPs
+	pAudioManager->LoadDSPs();
+
+	FMOD::ChannelGroup* mastergroup = 0;
+	pAudioManager->_result = pAudioManager->_system->getMasterChannelGroup(&mastergroup);
+	pAudioManager->error_check();
+
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[0].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[0].dsp->setBypass(true);
+	pAudioManager->error_check();
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[1].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[1].dsp->setBypass(true);
+	pAudioManager->error_check();
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[2].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[2].dsp->setBypass(true);
 	pAudioManager->error_check();
 #pragma endregion
 
@@ -292,57 +375,39 @@ int main() {
 	//Main loop
 	while (!glfwWindowShouldClose(_main_window)) {
 
-		/********************************/
-
-		pAudioManager->_result = pAudioManager->_system->update();
+		/*******************************RecordPlaybackRate*******************************/
+		bool isRecording = false;
+		pAudioManager->_result = pAudioManager->_system->isRecording(DEVICE_INDEX, &isRecording);
 		pAudioManager->error_check();
 
-		/*Determine how much has been recorded since we last checked*/
-		unsigned int recordPos = 0;
-		pAudioManager->_result = pAudioManager->_system->getRecordPosition(DEVICE_INDEX, &recordPos);
-		if (pAudioManager->_result != FMOD_ERR_RECORD_DISCONNECTED)
+		if (isRecording)
 		{
+			pAudioManager->_result = _sound->getLength(&soundLength, FMOD_TIMEUNIT_PCM);
 			pAudioManager->error_check();
-		}
 
-		static unsigned int lastRecordPos = 0;
-		unsigned int recordDelta = (recordPos >= lastRecordPos) ? (recordPos - lastRecordPos) : (recordPos + soundLength - lastRecordPos);
-		lastRecordPos = recordPos;
-		samplesRecorded += recordDelta;
-
-		static unsigned int minRecordDelta = (unsigned int)-1;
-		if (recordDelta && (recordDelta < minRecordDelta))
-		{
-			minRecordDelta = recordDelta; /* Smallest driver granularity seen so far */
-			adjustedLatency = (recordDelta <= desiredLatency) ? desiredLatency : recordDelta; /* Adjust our latency if driver granularity is high */
-		}
-
-		/*Delay playback until our desired latency is reached.*/
-		if (!channel && samplesRecorded >= adjustedLatency)
-		{
-			pAudioManager->_result = pAudioManager->_system->playSound(_sound, 0, false, &channel);
-			pAudioManager->error_check();
-		}
-
-		if (channel)
-		{
-			/*Stop playback if recording stops.*/
-			bool isRecording = false;
-			pAudioManager->_result = pAudioManager->_system->isRecording(DEVICE_INDEX, &isRecording);
+			/*Determine how much has been recorded since we last checked*/
+			unsigned int recordPos = 0;
+			pAudioManager->_result = pAudioManager->_system->getRecordPosition(DEVICE_INDEX, &recordPos);
 			if (pAudioManager->_result != FMOD_ERR_RECORD_DISCONNECTED)
 			{
 				pAudioManager->error_check();
 			}
 
-			if (!isRecording)
+			static unsigned int lastRecordPos = 0;
+			unsigned int recordDelta = (recordPos >= lastRecordPos) ? (recordPos - lastRecordPos) : (recordPos + soundLength - lastRecordPos);
+			lastRecordPos = recordPos;
+			samplesRecorded += recordDelta;
+
+			static unsigned int minRecordDelta = (unsigned int)-1;
+			if (recordDelta && (recordDelta < minRecordDelta))
 			{
-				pAudioManager->_result = channel->setPaused(true);
-				pAudioManager->error_check();
+				minRecordDelta = recordDelta; /* Smallest driver granularity seen so far */
+				adjustedLatency = (recordDelta <= desiredLatency) ? desiredLatency : recordDelta; /* Adjust our latency if driver granularity is high */
 			}
 
 			/*Determine how much has been played since we last checked.*/
 			unsigned int playPos = 0;
-			pAudioManager->_result = channel->getPosition(&playPos, FMOD_TIMEUNIT_PCM);
+			pAudioManager->_result = _channel->getPosition(&playPos, FMOD_TIMEUNIT_PCM);
 			pAudioManager->error_check();
 
 			static unsigned int lastPlayPos = 0;
@@ -366,11 +431,11 @@ int main() {
 				playbackRate = nativeRate + (nativeRate / 50);
 			}
 
-			pAudioManager->_result = channel->setFrequency((float)playbackRate);
+			pAudioManager->_result = _channel->setFrequency((float)playbackRate);
 			pAudioManager->error_check();
 		}
 
-		/********************************/
+		/*******************************RecordPlaybackRate*******************************/
 
 		//Reset text y position
 		_current_y_position = 30.0f;
@@ -381,33 +446,27 @@ int main() {
 		glUseProgram(_program);
 
 		render_text("           Media Fundamentals P3");
-		render_text("<=======================| Press H to Toggle Help");
+		render_text("<=======================>");
 		render_text("  ESC to Exit!");
-		render_text("  'P' - Play/Pause Track");
-		render_text("  'R' - reset track to 00:00,   +Shift to reset game state");
-		render_text("  Left/Right - Change Sound,   +Shift for Pan");
-		render_text("  Up/Down - Volume,   +Shift for Pitch.");
 		render_text("<=======================>");
 
 		//sprintf(_text_buffer, "Current Audio Item: %s", _audio_items[_current_audio_item_index].get_name().c_str());
 		//render_text(_text_buffer);
 
 		render_text("");
-		render_text("Adjust LATENCY define to compensate for stuttering");
-		sprintf(_text_buffer, "Current value is %dms", LATENCY_MS);
+
+		sprintf(_text_buffer, "Press 4 to %s", isRecording ? "start recording" : "stop recording");
 		render_text(_text_buffer);
-		render_text("");
-		sprintf(_text_buffer, "Press 1 to %s DSP effect", _dspEnabled ? "disable" : "enable");
+
+		bool bypass;
+		g_vec_DSP[0].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 5 to %s REVERB DSP effect", !bypass ? "disable" : "enable");
 		render_text(_text_buffer);
-		render_text("");
-		sprintf(_text_buffer, "Adjusted latency: %4d (%dms)", adjustedLatency, adjustedLatency * 1000 / nativeRate);
+		g_vec_DSP[1].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 6 to %s HIGHPASS DSP effect", !bypass ? "disable" : "enable");
 		render_text(_text_buffer);
-		sprintf(_text_buffer, "Actual latency:   %4d (%dms)", actualLatency, actualLatency * 1000 / nativeRate);
-		render_text(_text_buffer);
-		render_text("");
-		sprintf(_text_buffer, "Recorded: %5d (%ds)", samplesRecorded, samplesRecorded / nativeRate);
-		render_text(_text_buffer);
-		sprintf(_text_buffer, "Played:   %5d (%ds)", samplesPlayed, samplesPlayed / nativeRate);
+		g_vec_DSP[2].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 7 to %s LOWPASS DSP effect", !bypass ? "disable" : "enable");
 		render_text(_text_buffer);
 
 		glfwSwapBuffers(_main_window);

@@ -28,15 +28,15 @@ void cAudioManager::LoadDSPs() {
 	fprintf(stdout, "Loading DSPs...\n");
 
 	g_vec_DSP.push_back(DSP());
-	_result = _system->createDSPByType(FMOD_DSP_TYPE_ECHO, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_SFXREVERB, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());
-	_result = _system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_HIGHPASS, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());
-	_result = _system->createDSPByType(FMOD_DSP_TYPE_DISTORTION, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_LOWPASS, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());
@@ -52,11 +52,11 @@ void cAudioManager::LoadDSPs() {
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());
-	_result = _system->createDSPByType(FMOD_DSP_TYPE_HIGHPASS, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_TREMOLO, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());
-	_result = _system->createDSPByType(FMOD_DSP_TYPE_ITLOWPASS, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
+	_result = _system->createDSPByType(FMOD_DSP_TYPE_ECHO, &g_vec_DSP[g_vec_DSP.size() - 1].dsp);
 	this->error_check();
 
 	g_vec_DSP.push_back(DSP());

@@ -16,6 +16,7 @@ struct DSP {
 extern std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
 extern std::map<std::string, cAudioItem*> mpAudio;
 extern std::vector<DSP> g_vec_DSP;
+extern std::vector<cAudioItem*> vec_NetSound;
 
 class cAudioManager {
 	cAudioManager();
@@ -31,6 +32,7 @@ public:
 	FMOD::System* _system;
 	FMOD_RESULT _result;
 	static cAudioManager* GetAudioManager();
+
 
 	void LoadDSPs();
 	bool LoadNetSounds();

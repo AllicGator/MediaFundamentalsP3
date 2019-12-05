@@ -78,6 +78,7 @@ unsigned int _uniform_color;
 std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
 std::map<std::string, cAudioItem*> mpAudio;
 std::vector<DSP> g_vec_DSP;
+std::vector<cAudioItem*> vec_NetSound;
 //std::vector<AudioItem> _audio_items;
 int _current_audio_item_index = 0;
 
@@ -88,74 +89,6 @@ FMOD::Sound* _sound = NULL;
 FMOD::Channel* _channel = NULL;
 bool _record = false;
 cAudioManager* pAudioManager = cAudioManager::GetAudioManager();
-
-//TODO - MOVE INTO AUDIO MANAGER
-//bool initAudioItems()
-//{
-//	rapidxml::xml_document<> document;
-//	rapidxml::xml_node<>* root_node;
-//
-//	char input;
-//	bool usercontrol = true;
-//	std::string path;
-//	do
-//	{
-//		printf("Load Compressed Sounds (Y/N): ");
-//		std::cin >> input;
-//		if (input == 'y' || input == 'Y')
-//		{
-//			usercontrol = false;
-//			path = "./config_files/compressed_audio_file_paths.xml";
-//		}
-//		else if (input == 'n' || input == 'N')
-//		{
-//			usercontrol = false;
-//			path = "./config_files/uncompressed_audio_file_paths.xml";
-//		}
-//		else
-//			printf("Please select an option...\n");
-//	} while (usercontrol);
-//
-//	// Read XML file
-//	std::ifstream soundFiles(path);
-//
-//	if (!soundFiles)
-//	{
-//		printf("Unable to open %s\n", path.c_str());
-//		system("pause");
-//		return false;
-//	}
-//
-//	// Copy the file contents into our buffer
-//	std::vector<char> buffer((std::istreambuf_iterator<char>(soundFiles)), std::istreambuf_iterator<char>());
-//	buffer.push_back('\0');
-//
-//	// Parse the buffer using the xml parsinglib
-//	document.parse<0>(&buffer[0]);
-//
-//	// Find the root node
-//	root_node = document.first_node("SoundFiles");
-//
-//	// Iterate through all of the root node's children
-//	for (rapidxml::xml_node<>* platform_node = root_node->first_node("File");
-//		platform_node;
-//		platform_node = platform_node->next_sibling())
-//	{
-//		int i = 0;
-//		if (platform_node->first_attribute("path")->value() > 0)
-//		{
-//			/*AudioItem ai;
-//			ai.set_path(platform_node->first_attribute("path")->value());
-//			if (*platform_node->last_attribute("stream")->value() == 't')
-//				ai.create_and_play_sound(true, i++);
-//			else
-//				ai.create_and_play_sound(false, i++);
-//			_audio_items.push_back(ai);*/
-//		}
-//	}
-//
-//	return true;
-//}
 
 struct point 
 {
@@ -181,6 +114,10 @@ static void error_callback(int error, const char* description)
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		vec_NetSound[0]->SetIsPaused(!vec_NetSound[0]->GetIsPaused());
+	}
 
 	if (key == GLFW_KEY_4 && action == GLFW_PRESS)
 	{
@@ -286,10 +223,10 @@ int main() {
 
 	//pAudioManager->LoadDSPs();
 	//pAudioManager->error_check();
-	//
-	//assert(pAudioManager->LoadNetSounds());
-	//pAudioManager->error_check();
-	//
+	
+	assert(pAudioManager->LoadNetSounds());
+	pAudioManager->error_check();
+	
 	//assert(pAudioManager->LoadTextToSpeech());
 	//pAudioManager->error_check();
 
@@ -379,6 +316,44 @@ int main() {
 		bool isRecording = false;
 		pAudioManager->_result = pAudioManager->_system->isRecording(DEVICE_INDEX, &isRecording);
 		pAudioManager->error_check();
+		/********************************/
+		pAudioManager->_result = pAudioManager->_system->update();
+		pAudioManager->error_check();
+
+		// get open state of net sounds
+		for (size_t i = 0; i < vec_NetSound.size(); i++)	{
+			switch (vec_NetSound[i]->GetOpenState())
+			{
+			case FMOD_OPENSTATE_BUFFERING:
+				vec_NetSound[i]->SetState("Buffering...");
+				break;
+			case FMOD_OPENSTATE_CONNECTING:
+				vec_NetSound[i]->SetState("Connecting...");
+				break;
+			default:
+				vec_NetSound[i]->SetState((vec_NetSound[i]->GetIsPaused()) ? "Paused" : "Unpaused");
+				//vec_NetSound[i]->SetState((vec_NetSound[i]->GetIsPlaying()) ? "Playing" : vec_NetSound[i]->GetStateString());
+				break;
+			}
+			// get channel info or play net sound
+			FMOD::Channel* chnnl = vec_NetSound[i]->GetChannel();
+			if (chnnl) {
+				pAudioManager->_result = chnnl->isPlaying(vec_NetSound[i]->GetIsPlaying());
+				pAudioManager->error_check();
+				pAudioManager->_result = chnnl->getPaused(vec_NetSound[i]->GetIsPaused());
+				pAudioManager->error_check();
+
+				pAudioManager->_result = chnnl->getPosition(vec_NetSound[i]->GetPosition(), FMOD_TIMEUNIT_MS);
+				pAudioManager->error_check();
+
+				//If sound is starving set mute
+				pAudioManager->_result = chnnl->setMute(!vec_NetSound[i]->GetIsStarving());
+				pAudioManager->error_check();
+			}
+			else {
+				vec_NetSound[i]->PlayNetSound();
+			}
+		}	
 
 		if (isRecording)
 		{
@@ -454,10 +429,12 @@ int main() {
 		//render_text(_text_buffer);
 
 		render_text("");
-
-		sprintf(_text_buffer, "Press 4 to %s", isRecording ? "start recording" : "stop recording");
+		sprintf(_text_buffer, "Net Sound 1: %s", vec_NetSound[0]->GetStateString());
 		render_text(_text_buffer);
 
+		sprintf(_text_buffer, "Press 4 to %s", isRecording ?  "stop recording" : "start recording");
+		render_text(_text_buffer);
+		
 		bool bypass;
 		g_vec_DSP[0].dsp->getBypass(&bypass);
 		sprintf(_text_buffer, "Press 5 to %s REVERB DSP effect", !bypass ? "disable" : "enable");

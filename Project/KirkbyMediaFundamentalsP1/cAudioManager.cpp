@@ -1,7 +1,8 @@
-#include "cAudioManager.hpp"
 #include <iostream>
 #include <fstream>
 #include <RapidXml\rapidxml.hpp>
+#include "cAudioManager.hpp"
+#include <sstream>
 
 #pragma region SINGLETON
 cAudioManager cAudioManager::stonAudioMngr;
@@ -67,6 +68,10 @@ void cAudioManager::LoadDSPs() {
 bool cAudioManager::LoadNetSounds() {
 	fprintf(stdout, "Loading Net Sounds...\n");
 
+	// Set the default file buffer size for newly opened streams.
+	this->_result = this->_system->setStreamBufferSize(STREAM_BUFFER_SIZE_IN_MB, FMOD_TIMEUNIT_RAWBYTES);
+	this->error_check();
+
 	rapidxml::xml_document<> document;
 	rapidxml::xml_node<>* root_node;
 	std::string path = this->directory + this->netSounds;
@@ -87,21 +92,46 @@ bool cAudioManager::LoadNetSounds() {
 	// Find the root node
 	root_node = document.first_node("SoundFiles");
 
+	cAudioItem* ai;
+
 	// Iterate through all of the root node's children
 	// use to build audio object
 	for (rapidxml::xml_node<>* platform_node = root_node->first_node("File");
 		platform_node;
 		platform_node = platform_node->next_sibling()) {
-		int i = 0;
+
 		if (platform_node->first_attribute("path")->value() > 0) {
-			cAudioItem ai(this->_system);
-			ai.SetPath(platform_node->first_attribute("path")->value());
-			/*if (*platform_node->last_attribute("stream")->value() == 't')
-				ai.create_and_play_sound(true, i++);
-			else
-				ai.create_and_play_sound(false, i++);*/
-			////_audio_items.push_back(ai);
+			//Build audio item
+			ai = new cAudioItem(this->_system);
+			ai->SetPath(platform_node->first_attribute("path")->value());
+
+			// Initialize extended information to 0	
+			FMOD_CREATESOUNDEXINFO _ei;
+			memset(&_ei, 0, sizeof(FMOD_CREATESOUNDEXINFO));
+			//set size property
+			_ei.cbsize = sizeof(FMOD_CREATESOUNDEXINFO);
+			//Set file buffer size
+			_ei.filebuffersize = STREAM_BUFFER_SIZE_IN_MB / 4;
+			ai->SetExtendedInfo(_ei);
+
+			/*std::stringstream ss;
+			int i = -1;
+			ss << platform_node->first_attribute("channel")->value();
+			ss >> i;
+			ai.SetChannel(i);*/
+
+			std::string tmp = platform_node->first_attribute("startpaused")->value();
+			if (tmp == "false")
+				ai->SetIsPaused(false);
+			
+			mpAudio[platform_node->first_attribute("friendlyName")->value()] = ai;
+			vec_NetSound.push_back(ai);
+
+			ai->SetGroupName(platform_node->first_attribute("channelgroup")->value());
+
+			ai->CreateNetSound();
 		}
+		std::cout << "fuck";
 	}
 
 	return true;

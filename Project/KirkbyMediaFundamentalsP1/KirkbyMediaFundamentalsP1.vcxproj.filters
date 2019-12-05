@@ -21,25 +21,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cAudioItem.hpp">
-      <Filter>Audio Item</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\src\glad.c">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cAudioManager.hpp">
-      <Filter>Audio Manager</Filter>
-    </ClCompile>
-    <ClCompile Include="cAudioManager.cpp">
-      <Filter>Audio Manager</Filter>
     </ClCompile>
     <ClCompile Include="cAudioItem.cpp">
       <Filter>Audio Item</Filter>
     </ClCompile>
+    <ClCompile Include="cAudioManager.cpp">
+      <Filter>Audio Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cAudioItem.hpp">
+      <Filter>Audio Item</Filter>
+    </ClInclude>
+    <ClInclude Include="cAudioManager.hpp">
+      <Filter>Audio Manager</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

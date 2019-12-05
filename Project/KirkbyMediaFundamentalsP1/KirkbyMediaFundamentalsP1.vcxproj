@@ -146,14 +146,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="cAudioItem.hpp" />
+    <ClCompile Include="..\common\src\glad.c" />
+    <ClCompile Include="cAudioItem.cpp" />
+    <ClCompile Include="cAudioManager.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\src\glad.c" />
-    <ClCompile Include="cAudioManager.cpp" />
-    <ClCompile Include="cAudioItem.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="cAudioManager.hpp" />
+    <ClInclude Include="cAudioItem.hpp" />
+    <ClInclude Include="cAudioManager.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

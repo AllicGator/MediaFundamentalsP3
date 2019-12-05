@@ -2,7 +2,11 @@
 <SoundFiles>
   <File path="http://live-radio01.mediahubaustralia.com/2TJW/mp3/"
 		friendlyName="MediahubAus"
-		channel="2"
-		startpaused="false"
-		channelgroup="NetSound01" />
+		startpaused="true" />
+		<File path="http://uk6.internet-radio.com:8124"
+		friendlyName="UK Top 40"
+		startpaused="true" />
+		<File path="http://radio.jphip.com:8800"
+		friendlyName="KPop oh no...."
+		startpaused="true" />		
 </SoundFiles>

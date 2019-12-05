@@ -116,7 +116,22 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		glfwSetWindowShouldClose(window, GLFW_TRUE);
 
 	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		vec_NetSound[0]->SetIsPaused(!vec_NetSound[0]->GetIsPaused());
+		FMOD::Channel* theChannel = vec_NetSound[0]->GetChannel();
+		bool tmp;
+		theChannel->getPaused(&tmp);
+		pAudioManager->_result = theChannel->setPaused(!tmp);
+	}
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+		FMOD::Channel* theChannel = vec_NetSound[1]->GetChannel();
+		bool tmp;
+		theChannel->getPaused(&tmp);
+		pAudioManager->_result = theChannel->setPaused(!tmp);
+	}
+	if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+		FMOD::Channel* theChannel = vec_NetSound[2]->GetChannel();
+		bool tmp;
+		theChannel->getPaused(&tmp);
+		pAudioManager->_result = theChannel->setPaused(!tmp);
 	}
 
 	if (key == GLFW_KEY_4 && action == GLFW_PRESS)
@@ -331,7 +346,7 @@ int main() {
 				vec_NetSound[i]->SetState("Connecting...");
 				break;
 			default:
-				vec_NetSound[i]->SetState((vec_NetSound[i]->GetIsPaused()) ? "Paused" : "Unpaused");
+				vec_NetSound[i]->SetState((*vec_NetSound[i]->GetIsPaused()) ? "Paused" : "Unpaused");
 				//vec_NetSound[i]->SetState((vec_NetSound[i]->GetIsPlaying()) ? "Playing" : vec_NetSound[i]->GetStateString());
 				break;
 			}
@@ -347,7 +362,7 @@ int main() {
 				pAudioManager->error_check();
 
 				//If sound is starving set mute
-				pAudioManager->_result = chnnl->setMute(!vec_NetSound[i]->GetIsStarving());
+				pAudioManager->_result = chnnl->setMute(*vec_NetSound[i]->GetIsStarving());
 				pAudioManager->error_check();
 			}
 			else {
@@ -427,10 +442,13 @@ int main() {
 
 		//sprintf(_text_buffer, "Current Audio Item: %s", _audio_items[_current_audio_item_index].get_name().c_str());
 		//render_text(_text_buffer);
+		for (size_t i = 0; i < vec_NetSound.size(); i++)
+		{
+			sprintf(_text_buffer, "Netsound: %s --- %s", vec_NetSound[i]->GetStateString(), vec_NetSound[i]->GetPath().c_str());
+			render_text(_text_buffer);
+		}
 
 		render_text("");
-		sprintf(_text_buffer, "Net Sound 1: %s", vec_NetSound[0]->GetStateString());
-		render_text(_text_buffer);
 
 		sprintf(_text_buffer, "Press 4 to %s", isRecording ?  "stop recording" : "start recording");
 		render_text(_text_buffer);

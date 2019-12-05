@@ -127,11 +127,10 @@ bool cAudioManager::LoadNetSounds() {
 			mpAudio[platform_node->first_attribute("friendlyName")->value()] = ai;
 			vec_NetSound.push_back(ai);
 
-			ai->SetGroupName(platform_node->first_attribute("channelgroup")->value());
+			//ai->SetGroupName(platform_node->first_attribute("channelgroup")->value());
 
 			ai->CreateNetSound();
 		}
-		std::cout << "fuck";
 	}
 
 	return true;

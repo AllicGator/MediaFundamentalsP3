@@ -17,15 +17,10 @@
 //*/
 //
 
-/*	Project:	KirkbyMediaFundamentalsP1
+/*	Project:	MediaFundamentalsP3
  *	File:		main.cpp
- *	Author:		Dylan Kirkby
+ *	Author:		Dylan Kirkby, Brian Cowan, Ivan Parkhomenko
  *	Co-Authur:	Oscar Lara
- *	Purpose:	Expand my knowledge on the basics of FMOD by
- *				making a basic sound manipulation program
- *				with simplistic gameplay elements.
- *				Should be heavily refactored yet, but I was
- *				having a lot of circular dependancy logic problems.
  */
 
 #pragma region Includes

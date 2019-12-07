@@ -17,6 +17,8 @@ extern std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
 extern std::map<std::string, cAudioItem*> mpAudio;
 extern std::vector<DSP> g_vec_DSP;
 extern std::vector<cAudioItem*> vec_NetSound;
+extern std::vector<cAudioItem*> vec_TTS_WAV;
+extern std::vector<std::wstring> vec_TTS_Paragraph;
 
 class cAudioManager {
 	cAudioManager();

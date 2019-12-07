@@ -49,6 +49,9 @@
 #include <iostream>
 #include FT_FREETYPE_H  
 
+#include <sapi.h>
+#include <sphelper.h>
+
 #pragma endregion
 
 #pragma region Globals
@@ -79,6 +82,8 @@ std::map<std::string, FMOD::ChannelGroup*> mpChannelGoups;
 std::map<std::string, cAudioItem*> mpAudio;
 std::vector<DSP> g_vec_DSP;
 std::vector<cAudioItem*> vec_NetSound;
+std::vector<cAudioItem*> vec_TTS_WAV;
+std::vector<std::wstring> vec_TTS_Paragraph;
 //std::vector<AudioItem> _audio_items;
 int _current_audio_item_index = 0;
 
@@ -89,6 +94,13 @@ FMOD::Sound* _sound = NULL;
 FMOD::Channel* _channel = NULL;
 bool _record = false;
 cAudioManager* pAudioManager = cAudioManager::GetAudioManager();
+
+//TEXT TO SPEECH Globals
+CComPtr<ISpVoice> _voice1;
+CComPtr<ISpVoice> _voice2;
+CComPtr<ISpStream> _stream;
+CSpStreamFormat _audio_format;
+HRESULT _hr = S_OK;
 
 struct point 
 {
@@ -104,6 +116,91 @@ bool init_text();
 bool init_shaders();
 void render_text(const char* text);
 #pragma endregion
+
+void findAndReplaceAll(std::wstring& data, std::wstring toSearch, std::wstring replaceStr)
+{
+	// Get the first occurrence
+	size_t pos = data.find(toSearch);
+
+	// Repeat till end is reached
+	while (pos != std::wstring::npos)
+	{
+		// Replace this occurrence of Sub String
+		data.replace(pos, toSearch.size(), replaceStr);
+		// Get the next occurrence from the current position
+		pos = data.find(toSearch, pos + replaceStr.size());
+	}
+}
+
+bool init_tts() {
+
+	for (auto& value : vec_TTS_Paragraph)
+	{
+		findAndReplaceAll(value, L"~~", L"\"");
+	}
+
+	//Init api
+	_hr = ::CoInitialize(NULL);
+	//if (_hr != S_OK) {
+	//	fprintf(stderr, "Unable to initialize text to speech api...!\n");
+	//	return false;
+	//}
+
+	//Init voice
+	_hr = _voice1.CoCreateInstance(CLSID_SpVoice);
+	if (_hr != S_OK) {
+		fprintf(stderr, "Unable to initialize tts voice...!\n");
+		return false;
+	}
+
+
+
+
+	_hr = _voice2.CoCreateInstance(CLSID_SpVoice);
+	if (_hr != S_OK) {
+		fprintf(stderr, "Unable to initialize tts voice...!\n");
+		return false;
+	}
+
+	//set audio format
+	_hr = _audio_format.AssignFormat(SPSF_44kHz16BitStereo);
+	if (_hr != S_OK) {
+		fprintf(stderr, "Unable to set audio format...!\n");
+		return false;
+	}
+
+	//lets bind stream to a file
+	_hr = SPBindToFile(L"C:\\tmp\\Kirkby_Cowan_and_Parkhomenko_project3.wav", SPFM_CREATE_ALWAYS, &_stream, &_audio_format.FormatId(), _audio_format.WaveFormatExPtr());
+	if (_hr != S_OK) {
+		fprintf(stderr, "Unable to bind stream to file...!\n");
+		return false;
+	}
+
+	//set the output to the stream
+	_hr = _voice2->SetOutput(_stream, true);
+	if (_hr != S_OK) {
+		fprintf(stderr, "Unable to set voice output...!\n");
+		return false;
+	}
+
+
+	return true;
+}
+
+void release_tts() {
+	//release voice
+	if (_voice1) {
+		_voice1.Release();
+		_voice1 = NULL;
+	}
+
+	if (_stream) {
+		_stream->Close();
+		_stream.Release();
+	}
+
+	::CoUninitialize();
+}
 
 static void error_callback(int error, const char* description)
 {
@@ -223,11 +320,50 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		pAudioManager->error_check();
 	}
 
-	if (mods == GLFW_MOD_SHIFT) {
-		
+	if (key == GLFW_KEY_8 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[3].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[3].dsp->setBypass(bypass);
+		pAudioManager->error_check();
 	}
-	else {
-		
+
+	if (key == GLFW_KEY_9 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[4].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[4].dsp->setBypass(bypass);
+		pAudioManager->error_check();
+	}
+
+	if (key == GLFW_KEY_0 && action == GLFW_PRESS)
+	{
+		bool bypass;
+
+		pAudioManager->_result = g_vec_DSP[5].dsp->getBypass(&bypass);
+		pAudioManager->error_check();
+
+		bypass = !bypass;
+
+		pAudioManager->_result = g_vec_DSP[5].dsp->setBypass(bypass);
+		pAudioManager->error_check();
+	}
+
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		FMOD::Channel* theChannel = vec_TTS_WAV[0]->GetChannel();
+		bool tmp;
+		theChannel->getPaused(&tmp);
+		pAudioManager->_result = theChannel->setPaused(!tmp);
 	}
 }
 
@@ -242,11 +378,8 @@ int main() {
 	assert(pAudioManager->LoadNetSounds());
 	pAudioManager->error_check();
 	
-	//assert(pAudioManager->LoadTextToSpeech());
-	//pAudioManager->error_check();
-
-	//assert(pAudioManager->LoadTextToWav());
-	//pAudioManager->error_check();
+	assert(pAudioManager->LoadTextToSpeech());
+	pAudioManager->error_check();
 
 	fprintf(stdout, "Init opengl...\n");
 	assert(init_gl());
@@ -254,6 +387,9 @@ int main() {
 	assert(init_text());
 	fprintf(stdout, "Init shaders...\n");
 	assert(init_shaders());
+
+	fprintf(stdout, "Init tts...\n");
+	assert(init_tts());
 
 	fprintf(stdout, "Ready ...!\n");
 #pragma endregion
@@ -302,7 +438,7 @@ int main() {
 	unsigned int soundLength = 0;
 #pragma endregion
 
-#pragma region RecordDSPs
+#pragma region DSPs
 	pAudioManager->LoadDSPs();
 
 	FMOD::ChannelGroup* mastergroup = 0;
@@ -313,16 +449,55 @@ int main() {
 	pAudioManager->error_check();
 	pAudioManager->_result = g_vec_DSP[0].dsp->setBypass(true);
 	pAudioManager->error_check();
+
 	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[1].dsp);
 	pAudioManager->error_check();
 	pAudioManager->_result = g_vec_DSP[1].dsp->setBypass(true);
 	pAudioManager->error_check();
+
 	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[2].dsp);
 	pAudioManager->error_check();
 	pAudioManager->_result = g_vec_DSP[2].dsp->setBypass(true);
 	pAudioManager->error_check();
+
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[3].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[3].dsp->setBypass(true);
+	pAudioManager->error_check();
+
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[4].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[4].dsp->setBypass(true);
+	pAudioManager->error_check();
+
+	pAudioManager->_result = mastergroup->addDSP(0, g_vec_DSP[5].dsp);
+	pAudioManager->error_check();
+	pAudioManager->_result = g_vec_DSP[5].dsp->setBypass(true);
+	pAudioManager->error_check();
 #pragma endregion
 
+#pragma region TTS
+
+	_hr = _voice1->Speak(vec_TTS_Paragraph[0].c_str(), SPF_DEFAULT, NULL);
+	_hr = _voice1->Speak(vec_TTS_Paragraph[1].c_str(), SPF_DEFAULT, NULL);
+	_hr = _voice1->Speak(vec_TTS_Paragraph[2].c_str(), SPF_DEFAULT, NULL);
+
+#pragma endregion
+
+#pragma region TTS_WAV
+
+	_hr = _voice2->Speak(vec_TTS_Paragraph[3].c_str(), SPF_DEFAULT, NULL);
+	_hr = _voice2->Speak(vec_TTS_Paragraph[4].c_str(), SPF_DEFAULT, NULL);
+	_hr = _voice2->Speak(vec_TTS_Paragraph[5].c_str(), SPF_DEFAULT, NULL);
+
+	_hr = _voice2->Speak(vec_TTS_Paragraph[6].c_str(), SPF_DEFAULT, NULL);
+
+	assert(pAudioManager->LoadTextToWav());
+	pAudioManager->error_check();
+
+#pragma endregion
+
+#pragma region Main loop
 	//=======================================================================================
 	//Main loop
 	while (!glfwWindowShouldClose(_main_window)) {
@@ -463,17 +638,45 @@ int main() {
 		g_vec_DSP[2].dsp->getBypass(&bypass);
 		sprintf(_text_buffer, "Press 7 to %s LOWPASS DSP effect", !bypass ? "disable" : "enable");
 		render_text(_text_buffer);
+		g_vec_DSP[3].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 8 to %s ECHO DSP effect", !bypass ? "disable" : "enable");
+		render_text(_text_buffer);
+		g_vec_DSP[4].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 9 to %s PITCHSHIFT DSP effect", !bypass ? "disable" : "enable");
+		render_text(_text_buffer);
+		g_vec_DSP[5].dsp->getBypass(&bypass);
+		sprintf(_text_buffer, "Press 0 to %s TREMOLO DSP effect", !bypass ? "disable" : "enable");
+		render_text(_text_buffer);
+
+		render_text("");
+
+		sprintf(_text_buffer, "Press SPACEBAR to %s TTS WAV sound", vec_TTS_WAV[0]->GetIsPaused() ? "play" : "pause");
+		render_text(_text_buffer);
 
 		glfwSwapBuffers(_main_window);
 		glfwPollEvents();
 
 		glfwGetWindowSize(_main_window, &_window_width, &_window_height);
 	}
+#pragma endregion
+
+#pragma region Release
+
+	FMOD::DSP* tmpDSP;
+	for (size_t i = 0; i < 6; i++) {
+		pAudioManager->_result = mastergroup->getDSP(0, &tmpDSP);
+		pAudioManager->error_check();
+		pAudioManager->_result = mastergroup->removeDSP(tmpDSP);
+		pAudioManager->error_check();
+	}
 
 	pAudioManager->Release();
 
 	glfwDestroyWindow(_main_window);
 	glfwTerminate();
+
+	release_tts();
+#pragma endregion
 
 	return 0;
 }

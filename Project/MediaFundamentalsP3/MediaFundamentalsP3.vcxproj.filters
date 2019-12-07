@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="cAudioItem.cpp">
+      <Filter>AudioItem</Filter>
+    </ClCompile>
+    <ClCompile Include="cAudioManager.cpp">
+      <Filter>AudioManager</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\src\glad.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cAudioItem.hpp">
+      <Filter>AudioItem</Filter>
+    </ClInclude>
+    <ClInclude Include="cAudioManager.hpp">
+      <Filter>AudioManager</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="AudioItem">
+      <UniqueIdentifier>{948a0382-4a61-4894-ba22-838e14d5baf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AudioManager">
+      <UniqueIdentifier>{572b669d-91fe-45e7-960b-9f8ed5ae008e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{362ea5e0-9c56-4b6e-b7fd-a0631798060a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
